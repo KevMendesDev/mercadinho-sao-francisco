@@ -25,7 +25,7 @@ export function StockExit({ branchId }: { branchId: string }) {
   return <>
     <button className="btn-secondary" onClick={() => setOpen(true)}><Minus size={18}/>Registrar saída</button>
     {open && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"><div className="card w-full max-w-lg p-6">
-      <div className="mb-5 flex justify-between"><div><h2 className="text-xl font-black">Saída de estoque</h2><p className="text-sm text-zinc-500">A baixa usa FEFO: primeiro os lotes que vencem antes.</p></div><button onClick={() => setOpen(false)}><X/></button></div>
+      <div className="mb-5 flex items-start justify-between gap-4"><div><h2 className="text-xl font-black">Saída de estoque</h2><p className="text-sm text-zinc-500">A baixa usa FEFO: primeiro os lotes que vencem antes.</p></div><button type="button" aria-label="Fechar saída de estoque" onClick={() => setOpen(false)} className="grid size-10 shrink-0 place-items-center rounded-lg hover:bg-zinc-100"><X/></button></div>
       <form onSubmit={submit} className="space-y-4">
         <label className="block"><span className="mb-1.5 block text-sm font-bold">Produto</span><ProductPicker value={product?.id ?? ""} selectedProduct={product} onChange={setProduct}/></label>
         <label className="block"><span className="mb-1.5 block text-sm font-bold">Quantidade</span><input required min="1" type="number" name="quantity" className="field"/></label>

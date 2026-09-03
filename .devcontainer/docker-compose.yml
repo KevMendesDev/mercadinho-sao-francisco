@@ -1,0 +1,39 @@
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm
+    privileged: true
+    working_dir: /workspaces/mercadinho-sao-francisco
+    command: sleep infinity
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mercadinho_sf
+      AUTH_SECRET: dev-only-auth-secret-change-before-production-123
+      SEED_ADMIN_EMAIL: admin@mercadinho.local
+      SEED_ADMIN_PASSWORD: dev-admin-123
+      OPEN_FOOD_FACTS_USER_AGENT: MercadinhoSaoFrancisco/0.1 (contato@seudominio.com)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/workspaces/mercadinho-sao-francisco:cached
+      - node_modules:/workspaces/mercadinho-sao-francisco/node_modules
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: mercadinho_sf
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mercadinho_sf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  node_modules:
+  postgres_data:

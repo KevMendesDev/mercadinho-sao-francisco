@@ -26,8 +26,8 @@ export function ProductCreate({ onCreated, compact = false, open: controlledOpen
     if (!/^\d{8,14}$/.test(barcode)) { setError("Informe um código de barras válido."); return; }
     setFields((current) => ({ ...current, barcode })); setLookup(true); setError("");
     try {
-      const data = await requestJson<{ product?: Partial<Fields> }>(`/api/products/lookup/${barcode}`, {}, "Produto não encontrado no cadastro local nem no Open Food Facts.");
-      if (!data.product) { setError("Produto não encontrado no cadastro local nem no Open Food Facts."); return; }
+      const data = await requestJson<{ source?: string; product?: Partial<Fields> }>(`/api/products/lookup/${barcode}`, {}, "Produto não encontrado no cadastro local nem no Open Food Facts.");
+      if (!data.product) { setError(data.source === "EXTERNAL_UNAVAILABLE" ? "O Open Food Facts está indisponível. Preencha os dados do produto manualmente." : "Produto não encontrado no cadastro local nem no Open Food Facts."); return; }
       setFields((current) => ({ ...current, barcode, name: data.product?.name ?? "", brand: data.product?.brand ?? "", unit: data.product?.unit ?? "G" }));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível consultar o produto."); } finally { setLookup(false); }
   }
@@ -42,8 +42,8 @@ export function ProductCreate({ onCreated, compact = false, open: controlledOpen
 
   return <>
     {!hideTrigger && <button className={compact ? "btn-secondary px-3 py-2" : "btn-primary"} onClick={() => setOpen(true)}><Plus size={18}/>Novo produto</button>}
-    {open && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4"><div className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 md:p-7">
-      <div className="mb-6 flex items-center justify-between"><div><h2 className="text-xl font-black">Novo produto</h2><p className="text-sm text-zinc-500">O produto ficará disponível para todas as filiais.</p></div><button type="button" onClick={() => setOpen(false)}><X/></button></div>
+    {open && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4"><div role="dialog" aria-modal="true" aria-labelledby="new-product-title" className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 md:p-7">
+      <div className="mb-6 flex items-center justify-between"><div><h2 id="new-product-title" className="text-xl font-black">Novo produto</h2><p className="text-sm text-zinc-500">O produto ficará disponível para todas as filiais.</p></div><button type="button" aria-label="Fechar" onClick={() => setOpen(false)} className="grid size-10 place-items-center rounded-lg hover:bg-zinc-100"><X/></button></div>
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
         <label className="md:col-span-2"><span className="mb-1.5 block text-sm font-bold">Código de barras</span><div className="flex flex-wrap gap-2"><input className="field min-w-0 flex-1" value={fields.barcode} onChange={(event) => setFields({ ...fields, barcode: event.target.value })} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void lookupBarcode(); } }} placeholder="789..."/><button type="button" onClick={() => void lookupBarcode()} className="btn-secondary shrink-0" disabled={lookup}><Search size={17}/>{lookup ? "Buscando" : "Consultar"}</button><BarcodeScanner className="btn-secondary shrink-0" onDetected={(barcode) => void lookupBarcode(barcode)}/></div></label>
         <label><span className="mb-1.5 block text-sm font-bold">Nome *</span><input required className="field" value={fields.name} onChange={(event) => setFields({ ...fields, name: event.target.value })}/></label>

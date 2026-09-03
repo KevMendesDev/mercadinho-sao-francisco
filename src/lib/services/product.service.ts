@@ -70,21 +70,30 @@ export async function lookupBarcode(barcode: string) {
   const local = await findProductByBarcode(barcode);
   if (local) return { source: "LOCAL" as const, product: local };
 
-  const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`, {
-    headers: { "User-Agent": process.env.OPEN_FOOD_FACTS_USER_AGENT ?? "MercadinhoSaoFrancisco/0.1" },
-    signal: AbortSignal.timeout(5000),
-    next: { revalidate: 3600 },
-  });
-  if (!response.ok) return { source: "NOT_FOUND" as const, product: null };
-  const data = await response.json() as OffProduct;
-  if (!data.product?.product_name) return { source: "NOT_FOUND" as const, product: null };
-  return {
-    source: "OPEN_FOOD_FACTS" as const,
-    product: {
-      barcode,
-      name: data.product.product_name,
-      brand: data.product.brands?.split(",")[0]?.trim() || null,
-      unit: "G",
-    },
-  };
+  try {
+    const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`, {
+      headers: { "User-Agent": process.env.OPEN_FOOD_FACTS_USER_AGENT ?? "MercadinhoSaoFrancisco/0.1" },
+      signal: AbortSignal.timeout(5000),
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) {
+      if (response.status === 429 || response.status >= 500) return { source: "EXTERNAL_UNAVAILABLE" as const, product: null };
+      return { source: "NOT_FOUND" as const, product: null };
+    }
+    const data = await response.json() as OffProduct;
+    if (!data.product?.product_name) return { source: "NOT_FOUND" as const, product: null };
+    return {
+      source: "OPEN_FOOD_FACTS" as const,
+      product: {
+        barcode,
+        name: data.product.product_name,
+        brand: data.product.brands?.split(",")[0]?.trim() || null,
+        unit: "G",
+      },
+    };
+  } catch {
+    // A consulta externa é apenas um preenchimento opcional. O cadastro manual
+    // deve continuar disponível se o Open Food Facts estiver indisponível.
+    return { source: "EXTERNAL_UNAVAILABLE" as const, product: null };
+  }
 }

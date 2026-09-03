@@ -1,0 +1,35 @@
+{
+  "name": "Mercadinho São Francisco",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/mercadinho-sao-francisco",
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/node/.local/bin"
+  },
+  "forwardPorts": [
+    3000
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ],
+      "settings": {
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "postCreateCommand": "curl -fsSL https://chatgpt.com/codex/install.sh | sh && sudo chown -R node:node /workspaces/mercadinho-sao-francisco/node_modules && npm ci"
+}

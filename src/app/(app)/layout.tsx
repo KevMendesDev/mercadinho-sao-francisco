@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-[#f7f8fa]">
       <Sidebar role={session.role}/>
-      <div className="min-w-0 flex-1"><Topbar name={session.name} branchId={session.branchId} branches={branches}/><main className="mx-auto max-w-[1500px] p-4 md:p-7">{children}</main></div>
+      <div className="min-w-0 flex-1"><Topbar name={session.name} branchId={session.branchId} branches={branches}/><main className="mx-auto w-full max-w-[1500px] p-4 sm:p-5 md:p-7">{children}</main></div>
     </div>
   );
 }
