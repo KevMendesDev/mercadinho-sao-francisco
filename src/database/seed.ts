@@ -10,7 +10,8 @@ async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL ?? "admin@mercadinho.local").trim().toLowerCase();
   validateSeedAdminCredentials(email, password);
 
-  const dataSource = createDataSource();
+  const adminUrl = process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
+  const dataSource = createDataSource(adminUrl);
   try {
     await dataSource.initialize();
     const branchRepository = dataSource.getRepository(Branch);
@@ -41,7 +42,6 @@ async function main() {
   } finally {
     if (dataSource.isInitialized) await dataSource.destroy();
   }
-
 }
 
 main().catch((error) => {
