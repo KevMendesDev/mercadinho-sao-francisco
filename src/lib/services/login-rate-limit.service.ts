@@ -1,3 +1,4 @@
+import "server-only";
 import { EntityManager } from "typeorm";
 import { getDataSource } from "@/database/data-source";
 import { LoginRateLimit } from "@/database/entities";
@@ -7,16 +8,22 @@ const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 const BLOCK_MS = 15 * 60 * 1000;
 
-async function lockRecord(manager: EntityManager, identifier: string): Promise<LoginRateLimit> {
+async function lockRecord(
+  manager: EntityManager,
+  identifier: string,
+): Promise<LoginRateLimit> {
   await manager.query(
     `INSERT INTO "login_rate_limits" ("identifier", "window_started_at", "attempts") VALUES ($1, NOW(), 0) ON CONFLICT ("identifier") DO NOTHING`,
     [identifier],
   );
-  const record = await manager.getRepository(LoginRateLimit).createQueryBuilder("limit")
+  const record = await manager
+    .getRepository(LoginRateLimit)
+    .createQueryBuilder("limit")
     .setLock("pessimistic_write")
     .where("limit.identifier = :identifier", { identifier })
     .getOne();
-  if (!record) throw new Error("Não foi possível registrar a tentativa de login.");
+  if (!record)
+    throw new Error("Não foi possível registrar a tentativa de login.");
   return record;
 }
 

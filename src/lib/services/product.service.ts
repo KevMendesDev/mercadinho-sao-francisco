@@ -1,3 +1,4 @@
+import "server-only";
 import { ILike, MoreThan } from "typeorm";
 import { getDataSource } from "@/database/data-source";
 import { Category, Product, StockBatch } from "@/database/entities";
@@ -18,30 +19,65 @@ export async function listProducts(search = "", page?: number, size?: number) {
   const db = await getDataSource();
   const options = pagination(page, size);
   const repo = db.getRepository<Product>("products");
-  const where = search ? [
-    { name: ILike(`%${search}%`), active: true },
-    { barcode: ILike(`%${search}%`), active: true },
-    { brand: ILike(`%${search}%`), active: true },
-  ] : { active: true };
+  const where = search
+    ? [
+        { name: ILike(`%${search}%`), active: true },
+        { barcode: ILike(`%${search}%`), active: true },
+        { brand: ILike(`%${search}%`), active: true },
+      ]
+    : { active: true };
   const totalElements = await repo.count({ where });
   const currentPage = pageForTotal(options.page, options.size, totalElements);
-  const content = await repo.find({ where, relations: { category: true }, order: { name: "ASC" }, skip: (currentPage - 1) * options.size, take: options.size });
+  const content = await repo.find({
+    where,
+    relations: { category: true },
+    order: { name: "ASC" },
+    skip: (currentPage - 1) * options.size,
+    take: options.size,
+  });
   return pageResult(content, totalElements, currentPage, options.size);
 }
 
-export async function createProduct(input: ProductInput, userId: string): Promise<Product> {
+export async function createProduct(
+  input: ProductInput,
+  userId: string,
+): Promise<Product> {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
     const repo = manager.getRepository<Product>("products");
-    if (input.barcode && await repo.existsBy({ barcode: input.barcode })) throw new ConflictError("Código de barras já cadastrado.");
-    if (input.categoryId && !(await manager.getRepository<Category>("categories").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
-    const product = await repo.save(repo.create({ ...input, categoryId: input.categoryId || null, barcode: input.barcode || null, weight: input.weight == null ? null : input.weight.toFixed(3) }));
-    await writeAudit(manager, { entityType: "Product", entityId: product.id, action: "CREATE", userId, metadata: { barcode: product.barcode } });
+    if (input.barcode && (await repo.existsBy({ barcode: input.barcode })))
+      throw new ConflictError("Código de barras já cadastrado.");
+    if (
+      input.categoryId &&
+      !(await manager
+        .getRepository<Category>("categories")
+        .existsBy({ id: input.categoryId }))
+    )
+      throw new NotFoundError("Categoria não encontrada.");
+    const product = await repo.save(
+      repo.create({
+        ...input,
+        categoryId: input.categoryId || null,
+        barcode: input.barcode || null,
+        weight: input.weight == null ? null : input.weight.toFixed(3),
+      }),
+    );
+    await writeAudit(manager, {
+      entityType: "Product",
+      entityId: product.id,
+      action: "CREATE",
+      userId,
+      metadata: { barcode: product.barcode },
+    });
     return product;
   });
 }
 
-export async function updateProduct(id: string, input: ProductInput, userId: string): Promise<Product> {
+export async function updateProduct(
+  id: string,
+  input: ProductInput,
+  userId: string,
+): Promise<Product> {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
     const repo = manager.getRepository<Product>("products");
@@ -49,12 +85,30 @@ export async function updateProduct(id: string, input: ProductInput, userId: str
     if (!product) throw new NotFoundError("Produto não encontrado.");
     if (input.barcode) {
       const duplicate = await repo.findOneBy({ barcode: input.barcode });
-      if (duplicate && duplicate.id !== id) throw new ConflictError("Código de barras já cadastrado.");
+      if (duplicate && duplicate.id !== id)
+        throw new ConflictError("Código de barras já cadastrado.");
     }
-    if (input.categoryId && !(await manager.getRepository<Category>("categories").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
-    Object.assign(product, { ...input, categoryId: input.categoryId || null, barcode: input.barcode || null, weight: input.weight == null ? null : input.weight.toFixed(3) });
+    if (
+      input.categoryId &&
+      !(await manager
+        .getRepository<Category>("categories")
+        .existsBy({ id: input.categoryId }))
+    )
+      throw new NotFoundError("Categoria não encontrada.");
+    Object.assign(product, {
+      ...input,
+      categoryId: input.categoryId || null,
+      barcode: input.barcode || null,
+      weight: input.weight == null ? null : input.weight.toFixed(3),
+    });
     const updated = await repo.save(product);
-    await writeAudit(manager, { entityType: "Product", entityId: updated.id, action: "UPDATE", userId, metadata: { barcode: updated.barcode } });
+    await writeAudit(manager, {
+      entityType: "Product",
+      entityId: updated.id,
+      action: "UPDATE",
+      userId,
+      metadata: { barcode: updated.barcode },
+    });
     return updated;
   });
 }
@@ -65,41 +119,72 @@ export async function deleteProduct(id: string, userId: string) {
     const productRepo = manager.getRepository<Product>("products");
     const product = await productRepo.findOneBy({ id });
     if (!product) throw new NotFoundError("Produto não encontrado.");
-    const hasStock = await manager.getRepository<StockBatch>("stock_batches").existsBy({
-      productId: id,
-      quantity: MoreThan(0),
-    });
-    if (hasStock) throw new ConflictError("Produto não pode ser excluído porque possui estoque.");
+    const hasStock = await manager
+      .getRepository<StockBatch>("stock_batches")
+      .existsBy({
+        productId: id,
+        quantity: MoreThan(0),
+      });
+    if (hasStock)
+      throw new ConflictError(
+        "Produto não pode ser excluído porque possui estoque.",
+      );
     product.categoryId = null;
     await productRepo.save(product);
     await productRepo.softRemove(product);
-    await writeAudit(manager, { entityType: "Product", entityId: id, action: "DELETE", userId, metadata: { name: product.name } });
+    await writeAudit(manager, {
+      entityType: "Product",
+      entityId: id,
+      action: "DELETE",
+      userId,
+      metadata: { name: product.name },
+    });
   });
 }
 
-export async function findProductByBarcode(barcode: string): Promise<Product | null> {
+export async function findProductByBarcode(
+  barcode: string,
+): Promise<Product | null> {
   const db = await getDataSource();
-  return db.getRepository<Product>("products").findOneBy({ barcode, active: true });
+  return db
+    .getRepository<Product>("products")
+    .findOneBy({ barcode, active: true });
 }
 
-type OffProduct = { product?: { product_name?: string; brands?: string; categories?: string; quantity?: string } };
+type OffProduct = {
+  product?: {
+    product_name?: string;
+    brands?: string;
+    categories?: string;
+    quantity?: string;
+  };
+};
 
 export async function lookupBarcode(barcode: string) {
   const local = await findProductByBarcode(barcode);
   if (local) return { source: "LOCAL" as const, product: local };
 
   try {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`, {
-      headers: { "User-Agent": process.env.OPEN_FOOD_FACTS_USER_AGENT ?? "MercadinhoSaoFrancisco/0.1" },
-      signal: AbortSignal.timeout(5000),
-      next: { revalidate: 3600 },
-    });
+    const response = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`,
+      {
+        headers: {
+          "User-Agent":
+            process.env.OPEN_FOOD_FACTS_USER_AGENT ??
+            "MercadinhoSaoFrancisco/0.1",
+        },
+        signal: AbortSignal.timeout(5000),
+        next: { revalidate: 3600 },
+      },
+    );
     if (!response.ok) {
-      if (response.status === 429 || response.status >= 500) return { source: "EXTERNAL_UNAVAILABLE" as const, product: null };
+      if (response.status === 429 || response.status >= 500)
+        return { source: "EXTERNAL_UNAVAILABLE" as const, product: null };
       return { source: "NOT_FOUND" as const, product: null };
     }
-    const data = await response.json() as OffProduct;
-    if (!data.product?.product_name) return { source: "NOT_FOUND" as const, product: null };
+    const data = (await response.json()) as OffProduct;
+    if (!data.product?.product_name)
+      return { source: "NOT_FOUND" as const, product: null };
     return {
       source: "OPEN_FOOD_FACTS" as const,
       product: {

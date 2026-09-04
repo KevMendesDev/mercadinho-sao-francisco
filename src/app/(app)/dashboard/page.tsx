@@ -105,7 +105,7 @@ export default async function DashboardPage() {
                       <td className="font-semibold">
                         {movementLabel(movement.type)}
                       </td>
-                      <td>{movement.product.name}</td>
+                      <td>{movement.product?.name ?? "Produto removido"}</td>
                       <td>{movement.quantity}</td>
                       <td>{movement.user?.name ?? "Sistema"}</td>
                     </tr>
