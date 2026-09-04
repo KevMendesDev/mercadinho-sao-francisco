@@ -17,7 +17,7 @@ async function lockRecord(
     [identifier],
   );
   const record = await manager
-    .getRepository(LoginRateLimit)
+    .getRepository<LoginRateLimit>("login_rate_limits")
     .createQueryBuilder("limit")
     .setLock("pessimistic_write")
     .where("limit.identifier = :identifier", { identifier })
@@ -44,17 +44,17 @@ export async function consumeLoginAttempt(identifier: string): Promise<void> {
     }
     if (record.attempts >= MAX_ATTEMPTS) {
       record.blockedUntil = new Date(now.getTime() + BLOCK_MS);
-      await manager.getRepository(LoginRateLimit).save(record);
+      await manager.getRepository<LoginRateLimit>("login_rate_limits").save(record);
       blocked = true;
       return;
     }
     record.attempts += 1;
-    await manager.getRepository(LoginRateLimit).save(record);
+    await manager.getRepository<LoginRateLimit>("login_rate_limits").save(record);
   });
   if (blocked) throw new TooManyRequestsError();
 }
 
 export async function clearLoginAttempts(identifier: string): Promise<void> {
   const db = await getDataSource();
-  await db.getRepository(LoginRateLimit).delete({ identifier });
+  await db.getRepository<LoginRateLimit>("login_rate_limits").delete({ identifier });
 }

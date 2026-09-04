@@ -58,32 +58,23 @@ declare global {
 
 export async function getDataSource(): Promise<DataSource> {
   const existing = globalThis.__mercadinhoDataSource;
-  if (existing?.isInitialized && entities.every((entity) => existing.hasMetadata(entity))) {
+  if (existing?.isInitialized) {
     return existing;
   }
 
-  // No hot reload, as classes das entidades podem ser recriadas. Os metadados
-  // do DataSource anterior ficam associados às referências antigas.
-  if (existing?.isInitialized) {
-    globalThis.__mercadinhoDataSource = undefined;
-    globalThis.__mercadinhoDataSourcePromise = existing.destroy()
-      .then(() => createDataSource().initialize())
-      .then((dataSource) => {
-        globalThis.__mercadinhoDataSource = dataSource;
-        return dataSource;
-      })
-      .catch((error) => {
-        globalThis.__mercadinhoDataSourcePromise = undefined;
-        throw error;
-      });
+  if (globalThis.__mercadinhoDataSourcePromise) {
     return globalThis.__mercadinhoDataSourcePromise;
   }
 
-  if (!globalThis.__mercadinhoDataSourcePromise) {
-    const dataSource = createDataSource();
-    globalThis.__mercadinhoDataSourcePromise = dataSource.initialize()
-      .then(() => { globalThis.__mercadinhoDataSource = dataSource; return dataSource; })
-      .catch((error) => { globalThis.__mercadinhoDataSourcePromise = undefined; throw error; });
-  }
+  const dataSource = createDataSource();
+  globalThis.__mercadinhoDataSourcePromise = dataSource.initialize()
+    .then((initializedDataSource) => {
+      globalThis.__mercadinhoDataSource = initializedDataSource;
+      return initializedDataSource;
+    })
+    .catch((error) => {
+      globalThis.__mercadinhoDataSourcePromise = undefined;
+      throw error;
+    });
   return globalThis.__mercadinhoDataSourcePromise;
 }
