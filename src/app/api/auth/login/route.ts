@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api";
 import { loginSchema } from "@/lib/validation/schemas";
 import { authenticate } from "@/lib/services/auth.service";
 import { BadRequestError, PayloadTooLargeError } from "@/lib/errors";
+import { assertSameOrigin } from "@/lib/auth/csrf";
 
 const MAX_LOGIN_BODY_BYTES = 4 * 1024;
 
@@ -24,6 +25,7 @@ async function readLoginBody(request: Request): Promise<unknown> {
     chunks.push(value);
   }
   try {
+    assertSameOrigin(request);
     return JSON.parse(new TextDecoder().decode(Buffer.concat(chunks)));
   } catch {
     throw new BadRequestError("JSON de login inválido.");

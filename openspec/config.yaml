@@ -1,5 +1,10 @@
 schema: spec-driven
 
+context: |
+  Escreva todos os artefatos do OpenSpec exclusivamente em português do Brasil.
+  Use linguagem clara e técnica.
+  Mantenha nomes de arquivos, identificadores de código e comandos no idioma original.
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@/database/entities";
 import { apiError } from "@/lib/api";
 import { assertBranchAccess, requireApiUser } from "@/lib/auth/authorization";
+import { assertSessionCsrf } from "@/lib/auth/csrf";
 import { adjustBatch } from "@/lib/services/stock.service";
 import { stockAdjustmentSchema } from "@/lib/validation/schemas";
 import { getDataSource } from "@/database/data-source";
@@ -10,7 +11,8 @@ import { NotFoundError } from "@/lib/errors";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { user } = await requireApiUser([UserRole.ADMIN, UserRole.MANAGER]);
+    const { user, session } = await requireApiUser([UserRole.ADMIN, UserRole.MANAGER]);
+    await assertSessionCsrf(request, session);
     const { id } = await context.params;
     const body = await request.json();
     const input = stockAdjustmentSchema.parse({ ...body, batchId: id });

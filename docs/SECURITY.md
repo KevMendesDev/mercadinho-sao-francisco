@@ -28,5 +28,12 @@ Alterar `POSTGRES_USER` ou `POSTGRES_PASSWORD` no Compose não muda um volume j�
 
 - Aplique migrations antes de liberar a nova versão.
 - Faça backup testado do PostgreSQL antes de migrations ou reversões.
+
+## Checklist de release para sessões persistentes
+
+- [ ] Produção usa HTTPS; não publique a aplicação por HTTP.
+- [ ] `AUTH_SECRET` é estável, aleatório, possui ao menos 32 caracteres e não é o valor de desenvolvimento.
+- [ ] Execute a migration `UserSessions1788000000000` antes de implantar o código da aplicação.
+- [ ] Comunique que todos os usuários precisarão fazer login uma única vez após esta implantação; cookies JWT anteriores não são aceitos.
 - Monitore respostas `429`, falhas de autenticação e erros `5xx`.
 - Proteja o ambiente com TLS no proxy/rede de borda.

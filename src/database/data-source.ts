@@ -1,11 +1,12 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch } from "./entities";
+import { AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch, UserSession } from "./entities";
 import { InitialSchema1787700000000 } from "./migrations/1787700000000-InitialSchema";
 import { CategoriesAndProductDetails1787800000000 } from "./migrations/1787800000000-CategoriesAndProductDetails";
 import { LoginRateLimitsAndCategoryNameIndex1787900000000 } from "./migrations/1787900000000-LoginRateLimitsAndCategoryNameIndex";
+import { UserSessions1788000000000 } from "./migrations/1788000000000-UserSessions";
 
-const entities = [AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch];
+const entities = [AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch, UserSession];
 
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -18,7 +19,7 @@ export function createDataSource(): DataSource {
     type: "postgres",
     url: databaseUrl(),
     entities,
-    migrations: [InitialSchema1787700000000, CategoriesAndProductDetails1787800000000, LoginRateLimitsAndCategoryNameIndex1787900000000],
+    migrations: [InitialSchema1787700000000, CategoriesAndProductDetails1787800000000, LoginRateLimitsAndCategoryNameIndex1787900000000, UserSessions1788000000000],
     synchronize: false,
     logging: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });

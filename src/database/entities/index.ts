@@ -8,4 +8,5 @@ export * from "./StockBatch";
 export * from "./StockMovement";
 export * from "./User";
 export * from "./UserBranch";
+export * from "./UserSession";
 export * from "./enums";

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@/database/entities";
 import { apiError } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth/authorization";
+import { assertSessionCsrf } from "@/lib/auth/csrf";
 import { createProduct, listProducts } from "@/lib/services/product.service";
 import { productSchema } from "@/lib/validation/schemas";
 
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await requireApiUser([UserRole.ADMIN, UserRole.MANAGER]);
+    const { user, session } = await requireApiUser([UserRole.ADMIN, UserRole.MANAGER]);
+    await assertSessionCsrf(request, session);
     const input = productSchema.parse(await request.json());
     return NextResponse.json(await createProduct({ ...input, categoryId: input.categoryId || null, barcode: input.barcode || null }, user.id), { status: 201 });
   } catch (error) { return apiError(error); }

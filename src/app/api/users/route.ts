@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@/database/entities";
 import { apiError } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth/authorization";
+import { assertSessionCsrf } from "@/lib/auth/csrf";
 import { createUser, listUsers } from "@/lib/services/user.service";
 import { userCreateSchema } from "@/lib/validation/schemas";
 
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await requireApiUser([UserRole.ADMIN]);
+    const { user, session } = await requireApiUser([UserRole.ADMIN]);
+    await assertSessionCsrf(request, session);
     const input = userCreateSchema.parse(await request.json());
     const created = await createUser(input, user.id);
     return NextResponse.json({ id: created.id }, { status: 201 });
