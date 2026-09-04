@@ -17,7 +17,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const body = await request.json();
     const input = stockAdjustmentSchema.parse({ ...body, batchId: id });
     const db = await getDataSource();
-    const batch = await db.getRepository<StockBatch>("StockBatch").findOneBy({ id });
+    const batch = await db.getRepository<StockBatch>("stock_batches").findOneBy({ id });
     if (!batch) throw new NotFoundError("Lote não encontrado.");
     await assertBranchAccess(user, batch.branchId);
     await adjustBatch({ ...input, userId: user.id });

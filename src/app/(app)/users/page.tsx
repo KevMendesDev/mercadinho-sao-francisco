@@ -37,7 +37,7 @@ export default async function UsersPage({
         : undefined;
   const [users, branches] = await Promise.all([
     listUsers(Number(page), Number(size), { search, role, active: status }),
-    db.getRepository<Branch>("Branch").find({
+    db.getRepository<Branch>("branches").find({
       where: { active: true },
       order: { name: "ASC" },
       select: { id: true, name: true },

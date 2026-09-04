@@ -21,7 +21,7 @@ describe("removeStockFefo", () => {
     const savedMovements: Array<Record<string, unknown>> = [];
     const query = { setLock: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(), addOrderBy: vi.fn().mockReturnThis(), getMany: vi.fn().mockResolvedValue(batches) };
     const manager = {
-      getRepository: (entity: { name: string } | string) => (entity === "StockBatch" || (typeof entity !== "string" && entity.name === "StockBatch"))
+      getRepository: (entity: { name: string } | string) => (entity === "stock_batches" || (typeof entity !== "string" && entity.name === "StockBatch"))
         ? { createQueryBuilder: () => query, save: async (batch: typeof batches[number]) => { savedBatches.push({ ...batch }); return batch; } }
         : { create: (value: Record<string, unknown>) => value, save: async (movement: Record<string, unknown>) => { savedMovements.push(movement); return { id: String(savedMovements.length) }; } },
     };

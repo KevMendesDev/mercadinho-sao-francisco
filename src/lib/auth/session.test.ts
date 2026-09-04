@@ -5,7 +5,7 @@ vi.mock("next/headers", () => ({ cookies: async () => ({ get: state.get, set: st
 vi.mock("next/navigation", () => ({ redirect: state.redirect }));
 vi.mock("@/lib/environment", () => ({ requireAuthSecret: vi.fn(() => "a".repeat(32)) }));
 vi.mock("@/database/data-source", () => ({ getDataSource: vi.fn(async () => ({
-  getRepository: (name: string) => name === "UserSession" ? { save: state.save, findOne: state.findOne, update: state.update } : { findOne: state.user },
+  getRepository: (name: string) => name === "user_sessions" ? { save: state.save, findOne: state.findOne, update: state.update } : { findOne: state.user },
 })) }));
 
 import { createSession, hashSessionToken, readSession, requireSession, revokeSession, updateSessionBranch } from "./session";

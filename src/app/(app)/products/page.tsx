@@ -21,7 +21,7 @@ export default async function ProductsPage({
   const search = (params.search ?? "").trim();
   const options = pagination(Number(params.page), Number(params.size));
   const db = await getDataSource();
-  const repo = db.getRepository<Product>("Product");
+  const repo = db.getRepository<Product>("products");
   const query = repo
     .createQueryBuilder("product")
     .leftJoinAndSelect("product.category", "category")
@@ -42,7 +42,7 @@ export default async function ProductsPage({
     .getMany();
   const [totalProducts, totalCategories] = await Promise.all([
     repo.countBy({ active: true }),
-    db.getRepository<Category>("Category").count(),
+    db.getRepository<Category>("categories").count(),
   ]);
   const urlFor = (targetPage: number) =>
     `/products?${new URLSearchParams({ ...(search ? { search } : {}), page: String(targetPage), size: String(options.size) }).toString()}`;

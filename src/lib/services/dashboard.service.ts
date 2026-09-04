@@ -4,9 +4,9 @@ import { addDaysToDate, businessDate } from "@/lib/date";
 
 export async function getDashboard(branchId: string) {
   const db = await getDataSource();
-  const productRepo = db.getRepository<Product>("Product");
-  const batchRepo = db.getRepository<StockBatch>("StockBatch");
-  const movementRepo = db.getRepository<StockMovement>("StockMovement");
+  const productRepo = db.getRepository<Product>("products");
+  const batchRepo = db.getRepository<StockBatch>("stock_batches");
+  const movementRepo = db.getRepository<StockMovement>("stock_movements");
   const date = businessDate();
   const soonDate = addDaysToDate(date, 30);
 

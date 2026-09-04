@@ -17,7 +17,7 @@ export type ProductInput = {
 export async function listProducts(search = "", page?: number, size?: number) {
   const db = await getDataSource();
   const options = pagination(page, size);
-  const repo = db.getRepository<Product>("Product");
+  const repo = db.getRepository<Product>("products");
   const where = search ? [
     { name: ILike(`%${search}%`), active: true },
     { barcode: ILike(`%${search}%`), active: true },
@@ -32,9 +32,9 @@ export async function listProducts(search = "", page?: number, size?: number) {
 export async function createProduct(input: ProductInput, userId: string): Promise<Product> {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    const repo = manager.getRepository<Product>("Product");
+    const repo = manager.getRepository<Product>("products");
     if (input.barcode && await repo.existsBy({ barcode: input.barcode })) throw new ConflictError("Código de barras já cadastrado.");
-    if (input.categoryId && !(await manager.getRepository<Category>("Category").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
+    if (input.categoryId && !(await manager.getRepository<Category>("categories").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
     const product = await repo.save(repo.create({ ...input, categoryId: input.categoryId || null, barcode: input.barcode || null, weight: input.weight == null ? null : input.weight.toFixed(3) }));
     await writeAudit(manager, { entityType: "Product", entityId: product.id, action: "CREATE", userId, metadata: { barcode: product.barcode } });
     return product;
@@ -44,14 +44,14 @@ export async function createProduct(input: ProductInput, userId: string): Promis
 export async function updateProduct(id: string, input: ProductInput, userId: string): Promise<Product> {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    const repo = manager.getRepository<Product>("Product");
+    const repo = manager.getRepository<Product>("products");
     const product = await repo.findOneBy({ id });
     if (!product) throw new NotFoundError("Produto não encontrado.");
     if (input.barcode) {
       const duplicate = await repo.findOneBy({ barcode: input.barcode });
       if (duplicate && duplicate.id !== id) throw new ConflictError("Código de barras já cadastrado.");
     }
-    if (input.categoryId && !(await manager.getRepository<Category>("Category").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
+    if (input.categoryId && !(await manager.getRepository<Category>("categories").existsBy({ id: input.categoryId }))) throw new NotFoundError("Categoria não encontrada.");
     Object.assign(product, { ...input, categoryId: input.categoryId || null, barcode: input.barcode || null, weight: input.weight == null ? null : input.weight.toFixed(3) });
     const updated = await repo.save(product);
     await writeAudit(manager, { entityType: "Product", entityId: updated.id, action: "UPDATE", userId, metadata: { barcode: updated.barcode } });
@@ -61,7 +61,7 @@ export async function updateProduct(id: string, input: ProductInput, userId: str
 
 export async function findProductByBarcode(barcode: string): Promise<Product | null> {
   const db = await getDataSource();
-  return db.getRepository<Product>("Product").findOneBy({ barcode, active: true });
+  return db.getRepository<Product>("products").findOneBy({ barcode, active: true });
 }
 
 type OffProduct = { product?: { product_name?: string; brands?: string; categories?: string; quantity?: string } };
