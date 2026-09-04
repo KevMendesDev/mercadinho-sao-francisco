@@ -24,6 +24,8 @@ O `docker-compose.yml` expõe PostgreSQL apenas em `127.0.0.1` e exige `POSTGRES
 
 Alterar `POSTGRES_USER` ou `POSTGRES_PASSWORD` no Compose não muda um volume já inicializado. Faça rotação no PostgreSQL, atualize a `DATABASE_URL` de forma coordenada e valide a conexão; não remova o volume para trocar senha.
 
+Em Functions, `DATABASE_URL` deve apontar para o pooler do provedor; `DATABASE_DIRECT_URL` é exclusiva de migrations e seed. Habilite `DATABASE_SSL=true` quando TLS for obrigatório e preserve a validação de certificado sempre que possível.
+
 ## Operação
 
 - Aplique migrations antes de liberar a nova versão.

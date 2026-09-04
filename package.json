@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "verify:traces": "node scripts/verify-serverless-traces.mjs",
+    "verify:serverless": "npm run build && npm run verify:traces",
     "db:migrate": "ts-node --project tsconfig.database.json src/database/run-migrations.ts",
     "db:revert": "ts-node --project tsconfig.database.json src/database/revert-migration.ts",
     "db:seed": "ts-node --project tsconfig.database.json src/database/seed.ts"
@@ -25,6 +27,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "reflect-metadata": "^0.2.2",
+    "server-only": "^0.0.1",
     "typeorm": "^1.1.1",
     "zod": "^4.1.5"
   },

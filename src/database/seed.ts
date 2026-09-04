@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { hash } from "bcryptjs";
-import { createDataSource } from "./data-source";
-import { Branch, User, UserRole } from "./entities";
-import { validateSeedAdminCredentials } from "../lib/environment";
+import { createCliDataSource } from "./data-source-cli";
+import { Branch, User } from "./entities";
+import { UserRole } from "./entities/enums";
+import { validateSeedAdminCredentials } from "./seed-validation";
 
 async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD;
@@ -11,7 +12,7 @@ async function main() {
   validateSeedAdminCredentials(email, password);
 
   const adminUrl = process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
-  const dataSource = createDataSource(adminUrl);
+  const dataSource = createCliDataSource(adminUrl);
   try {
     await dataSource.initialize();
     const branchRepository = dataSource.getRepository(Branch);

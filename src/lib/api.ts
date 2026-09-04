@@ -12,6 +12,9 @@ export function apiError(error: unknown) {
   if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
     return NextResponse.json({ error: "Já existe um registro com estes dados." }, { status: 409 });
   }
+  if (typeof error === "object" && error !== null && "code" in error && (error.code === "23001" || error.code === "23503")) {
+    return NextResponse.json({ error: "Não é possível excluir este registro porque ele está sendo utilizado." }, { status: 409 });
+  }
   console.error("Erro não tratado na API:", error);
   return NextResponse.json({ error: "Não foi possível concluir a operação. Tente novamente." }, { status: 500 });
 }

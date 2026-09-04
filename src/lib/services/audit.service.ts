@@ -1,3 +1,4 @@
+import "server-only";
 import { EntityManager } from "typeorm";
 import { AuditLog } from "@/database/entities";
 

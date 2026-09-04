@@ -5,7 +5,7 @@ const { getDataSource, writeAudit } = vi.hoisted(() => ({ getDataSource: vi.fn()
 vi.mock("@/database/data-source", () => ({ getDataSource }));
 vi.mock("./audit.service", () => ({ writeAudit }));
 
-import { removeStockFefo } from "./stock.service";
+import { addStockEntry, removeStockFefo } from "./stock.service";
 
 describe("removeStockFefo", () => {
   beforeEach(() => {
@@ -17,19 +17,19 @@ describe("removeStockFefo", () => {
       { id: "batch-1", productId: "product-1", branchId: "branch-1", quantity: 2, expirationDate: "2026-01-01", createdAt: new Date("2025-01-01") },
       { id: "batch-2", productId: "product-1", branchId: "branch-1", quantity: 5, expirationDate: "2026-02-01", createdAt: new Date("2025-01-02") },
     ];
-    const savedBatches: typeof batches = [];
+    const updatedBatches: Array<{ id: string; quantity: number }> = [];
     const savedMovements: Array<Record<string, unknown>> = [];
     const query = { setLock: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(), addOrderBy: vi.fn().mockReturnThis(), getMany: vi.fn().mockResolvedValue(batches) };
     const manager = {
       getRepository: (entity: { name: string } | string) => (entity === "stock_batches" || (typeof entity !== "string" && entity.name === "StockBatch"))
-        ? { createQueryBuilder: () => query, save: async (batch: typeof batches[number]) => { savedBatches.push({ ...batch }); return batch; } }
-        : { create: (value: Record<string, unknown>) => value, save: async (movement: Record<string, unknown>) => { savedMovements.push(movement); return { id: String(savedMovements.length) }; } },
+        ? { createQueryBuilder: () => query, update: async (id: string, values: { quantity: number }) => { updatedBatches.push({ id, quantity: values.quantity }); } }
+        : { insert: async (movement: Record<string, unknown>) => { savedMovements.push(movement); return { identifiers: [{ id: String(savedMovements.length) }] }; } },
     };
     getDataSource.mockResolvedValue({ transaction: async (callback: (value: typeof manager) => Promise<void>) => callback(manager) });
 
     await removeStockFefo({ productId: "product-1", branchId: "branch-1", quantity: 4, reason: "Venda", userId: "user-1" });
 
-    expect(savedBatches.map((batch) => batch.quantity)).toEqual([0, 3]);
+    expect(updatedBatches.map((batch) => batch.quantity)).toEqual([0, 3]);
     expect(savedMovements.map((movement) => movement.quantity)).toEqual([2, 2]);
     expect(writeAudit).toHaveBeenCalledOnce();
   });
@@ -41,5 +41,27 @@ describe("removeStockFefo", () => {
 
     await expect(removeStockFefo({ productId: "product-1", branchId: "branch-1", quantity: 3, reason: "Venda", userId: "user-1" })).rejects.toMatchObject({ message: "Estoque insuficiente. Disponível: 2." });
     expect(writeAudit).not.toHaveBeenCalled();
+  });
+});
+
+describe("addStockEntry", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("insere lote e movimentação sem salvar o grafo de relações", async () => {
+    const batchInsert = vi.fn().mockResolvedValue({ identifiers: [{ id: "batch-1" }] });
+    const movementInsert = vi.fn().mockResolvedValue({ identifiers: [{ id: "movement-1" }] });
+    const manager = {
+      getRepository: (name: string) => {
+        if (name === "products") return { existsBy: vi.fn().mockResolvedValue(true) };
+        if (name === "stock_batches") return { insert: batchInsert, save: vi.fn() };
+        return { insert: movementInsert, save: vi.fn() };
+      },
+    };
+    getDataSource.mockResolvedValue({ transaction: async (callback: (value: typeof manager) => Promise<{ id: string }>) => callback(manager) });
+
+    await expect(addStockEntry({ productId: "product-1", branchId: "branch-1", quantity: 2, expirationDate: "2026-01-01", userId: "user-1" })).resolves.toEqual({ id: "batch-1" });
+    expect(batchInsert).toHaveBeenCalledOnce();
+    expect(movementInsert).toHaveBeenCalledOnce();
+    expect(writeAudit).toHaveBeenCalledWith(manager, expect.objectContaining({ entityId: "batch-1", metadata: { quantity: 2, movementId: "movement-1" } }));
   });
 });

@@ -57,7 +57,7 @@ export default async function MovementsPage({
                       {labels[movement.type]}
                     </span>
                   </td>
-                  <td className="font-bold">{movement.product.name}</td>
+                  <td className="font-bold">{movement.product?.name ?? "Produto removido"}</td>
                   <td className="font-black">{movement.quantity}</td>
                   <td>{movement.source}</td>
                   <td>{movement.reason || "—"}</td>

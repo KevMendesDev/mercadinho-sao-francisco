@@ -1,8 +1,8 @@
 import "dotenv/config";
-import { createDataSource } from "./data-source";
+import { createCliDataSource } from "./data-source-cli";
 
 const migrationUrl = process.env.DATABASE_DIRECT_URL ?? process.env.DATABASE_URL;
-const dataSource = createDataSource(migrationUrl);
+const dataSource = createCliDataSource(migrationUrl);
 
 async function main() {
   try {

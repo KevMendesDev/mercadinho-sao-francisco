@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole } from "@/database/entities";
+import { UserRole } from "@/database/entities/enums";
 
 export const loginSchema = z.object({
   email: z.email().max(190).transform((value) => value.trim().toLowerCase()),
