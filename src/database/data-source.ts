@@ -7,6 +7,10 @@ import { CategoriesAndProductDetails1787800000000 } from "./migrations/178780000
 import { LoginRateLimitsAndCategoryNameIndex1787900000000 } from "./migrations/1787900000000-LoginRateLimitsAndCategoryNameIndex";
 import { UserSessions1788000000000 } from "./migrations/1788000000000-UserSessions";
 
+// O TypeORM carrega o driver PostgreSQL dinamicamente com require("pg") por padrão.
+// Em runtimes serverless/bundled (como Vercel), esse require dinâmico pode não ser
+// detectado pelo rastreamento de dependências. Exigimos o módulo explicitamente e
+// o entregamos ao TypeORM para garantir que o pg faça parte da Function.
 const entities = [AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch, UserSession];
 
 function databaseUrl(overrideUrl?: string): string {
