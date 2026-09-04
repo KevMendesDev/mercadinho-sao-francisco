@@ -8,20 +8,21 @@ import { UserSessions1788000000000 } from "./migrations/1788000000000-UserSessio
 
 const entities = [AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch, UserSession];
 
-function databaseUrl(): string {
-  const url = process.env.DATABASE_URL;
+function databaseUrl(overrideUrl?: string): string {
+  const url = overrideUrl ?? process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL não configurada.");
   return url;
 }
 
-export function createDataSource(): DataSource {
+export function createDataSource(overrideUrl?: string): DataSource {
   return new DataSource({
     type: "postgres",
-    url: databaseUrl(),
+    url: databaseUrl(overrideUrl),
     entities,
     migrations: [InitialSchema1787700000000, CategoriesAndProductDetails1787800000000, LoginRateLimitsAndCategoryNameIndex1787900000000, UserSessions1788000000000],
     synchronize: false,
     logging: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    extra: process.env.NODE_ENV === "production" ? { max: 5 } : undefined,
   });
 }
 
