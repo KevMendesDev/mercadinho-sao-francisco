@@ -28,7 +28,7 @@ export async function createSession(data: Omit<SessionData, "csrfTokenHash" | "s
   requireAuthSecret();
   const now = new Date(); const absoluteExpiresAt = new Date(now.getTime() + ABSOLUTE_MS);
   const token = randomToken(); const csrfToken = randomToken(); const db = await getDataSource();
-  await db.getRepository<UserSession>("user_sessions").save({ tokenHash: hashSessionToken(token), csrfTokenHash: hashSessionToken(csrfToken), userId: data.userId, branchId: data.branchId, lastActivityAt: now, idleExpiresAt: new Date(now.getTime() + IDLE_MS), absoluteExpiresAt, revokedAt: null });
+  await db.getRepository<UserSession>("user_sessions").insert({ tokenHash: hashSessionToken(token), csrfTokenHash: hashSessionToken(csrfToken), userId: data.userId, branchId: data.branchId, lastActivityAt: now, idleExpiresAt: new Date(now.getTime() + IDLE_MS), absoluteExpiresAt, revokedAt: null });
   await issueCookies(token, csrfToken, absoluteExpiresAt);
 }
 

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), save: vi.fn(), findOne: vi.fn(), update: vi.fn(), user: vi.fn(), redirect: vi.fn(() => { throw new Error("redirect"); }) }));
+const state = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), insert: vi.fn(), findOne: vi.fn(), update: vi.fn(), user: vi.fn(), redirect: vi.fn(() => { throw new Error("redirect"); }) }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: state.get, set: state.set }) }));
 vi.mock("next/navigation", () => ({ redirect: state.redirect }));
 vi.mock("@/lib/environment", () => ({ requireAuthSecret: vi.fn(() => "a".repeat(32)) }));
 vi.mock("@/database/data-source", () => ({ getDataSource: vi.fn(async () => ({
-  getRepository: (name: string) => name === "user_sessions" ? { save: state.save, findOne: state.findOne, update: state.update } : { findOne: state.user },
+  getRepository: (name: string) => name === "user_sessions" ? { insert: state.insert, findOne: state.findOne, update: state.update } : { findOne: state.user },
 })) }));
 
 import { createSession, hashSessionToken, readSession, requireSession, revokeSession, updateSessionBranch } from "./session";
@@ -21,7 +21,7 @@ describe("sessões persistentes", () => {
 
   it("cria tokens opacos e cookies com atributos distintos", async () => {
     await createSession({ userId: "user", name: "Nome", email: "n@example.test", role: "OPERATOR" as never, branchId: "branch" });
-    expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/), csrfTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/), userId: "user", branchId: "branch" }));
+    expect(state.insert).toHaveBeenCalledWith(expect.objectContaining({ tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/), csrfTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/), userId: "user", branchId: "branch" }));
     expect(state.set).toHaveBeenNthCalledWith(1, "msf_session", expect.stringMatching(/^[A-Za-z0-9_-]{43}$/), expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" }));
     expect(state.set).toHaveBeenNthCalledWith(2, "msf_csrf", expect.stringMatching(/^[A-Za-z0-9_-]{43}$/), expect.objectContaining({ httpOnly: false, sameSite: "strict", path: "/" }));
   });

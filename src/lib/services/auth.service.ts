@@ -22,7 +22,6 @@ export async function authenticate(email: string, password: string, branchId: st
     const hasAccess = await db.getRepository<UserBranch>("user_branches").existsBy({ userId: user.id, branchId });
     if (!hasAccess) throw new ForbiddenError("Usuário sem acesso a esta filial.");
   }
-  user.lastAccessAt = new Date();
-  await db.getRepository<User>("users").save(user);
+  await db.getRepository<User>("users").update(user.id, { lastAccessAt: new Date() });
   await createSession({ userId: user.id, name: user.name, email: user.email, role: user.role, branchId });
 }
