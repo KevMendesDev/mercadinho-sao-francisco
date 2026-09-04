@@ -11,7 +11,7 @@ export type UserFilters = { search?: string; role?: UserRole; active?: boolean }
 export async function listUsers(page?: number, size?: number, filters: UserFilters = {}) {
   const db = await getDataSource();
   const options = pagination(page, size);
-  const query = db.getRepository<User>("User").createQueryBuilder("user").withDeleted()
+  const query = db.getRepository<User>("users").createQueryBuilder("user").withDeleted()
     .leftJoinAndSelect("user.branchAccesses", "branchAccesses")
     .leftJoinAndSelect("branchAccesses.branch", "branch")
     .orderBy("user.name", "ASC");
@@ -27,16 +27,16 @@ export async function listUsers(page?: number, size?: number, filters: UserFilte
 export async function createUser(input: { name: string; email: string; password: string; role: UserRole; branchIds: string[]; active: boolean }, actorId: string) {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    const repo = manager.getRepository<User>("User");
+    const repo = manager.getRepository<User>("users");
     if (await repo.findOne({ where: { email: input.email }, withDeleted: true })) throw new ConflictError("E-mail já cadastrado.");
-    if (input.role !== UserRole.ADMIN && await manager.getRepository<Branch>("Branch").countBy({ id: In(input.branchIds) }) !== input.branchIds.length) throw new BadRequestError("Uma ou mais filiais selecionadas não existem.");
+    if (input.role !== UserRole.ADMIN && await manager.getRepository<Branch>("branches").countBy({ id: In(input.branchIds) }) !== input.branchIds.length) throw new BadRequestError("Uma ou mais filiais selecionadas não existem.");
     const user = await repo.save(repo.create({
       name: input.name, email: input.email, passwordHash: await hash(input.password, 12), role: input.role,
       active: input.active, deletedAt: input.active ? null : new Date(),
     }));
     if (input.role !== UserRole.ADMIN && input.branchIds.length === 0) throw new BadRequestError("Selecione ao menos uma filial.");
     if (input.role !== UserRole.ADMIN) {
-      await manager.getRepository<UserBranch>("UserBranch").save(input.branchIds.map((branchId) => manager.getRepository<UserBranch>("UserBranch").create({ userId: user.id, branchId })));
+      await manager.getRepository<UserBranch>("user_branches").save(input.branchIds.map((branchId) => manager.getRepository<UserBranch>("user_branches").create({ userId: user.id, branchId })));
     }
     await writeAudit(manager, { entityType: "User", entityId: user.id, action: "CREATE", userId: actorId, metadata: { role: user.role, branchIds: input.branchIds } });
     return user;
@@ -47,7 +47,7 @@ export async function updateUser(id: string, input: { name?: string; role?: User
   const db = await getDataSource();
   return db.transaction(async (manager) => {
     await manager.query("SELECT pg_advisory_xact_lock(hashtext($1))", ["users:active-admin"]);
-    const repo = manager.getRepository<User>("User");
+    const repo = manager.getRepository<User>("users");
     const user = await repo.findOne({ where: { id }, withDeleted: true });
     if (!user) throw new NotFoundError("Usuário não encontrado.");
     if (id === actorId && input.active === false) throw new BadRequestError("Você não pode desativar o próprio usuário.");
@@ -67,11 +67,11 @@ export async function updateUser(id: string, input: { name?: string; role?: User
 
     if (input.branchIds !== undefined || input.role !== undefined) {
       const branchIds = input.branchIds ?? [];
-      if (user.role !== UserRole.ADMIN && await manager.getRepository<Branch>("Branch").countBy({ id: In(branchIds) }) !== branchIds.length) throw new BadRequestError("Uma ou mais filiais selecionadas não existem.");
-      await manager.getRepository<UserBranch>("UserBranch").delete({ userId: user.id });
+      if (user.role !== UserRole.ADMIN && await manager.getRepository<Branch>("branches").countBy({ id: In(branchIds) }) !== branchIds.length) throw new BadRequestError("Uma ou mais filiais selecionadas não existem.");
+      await manager.getRepository<UserBranch>("user_branches").delete({ userId: user.id });
       if (user.role !== UserRole.ADMIN) {
         if (branchIds.length === 0) throw new BadRequestError("Selecione ao menos uma filial para este perfil.");
-        await manager.getRepository<UserBranch>("UserBranch").save(branchIds.map((branchId) => manager.getRepository<UserBranch>("UserBranch").create({ userId: user.id, branchId })));
+        await manager.getRepository<UserBranch>("user_branches").save(branchIds.map((branchId) => manager.getRepository<UserBranch>("user_branches").create({ userId: user.id, branchId })));
       }
     }
     await writeAudit(manager, { entityType: "User", entityId: user.id, action: user.active ? "UPDATE_OR_REACTIVATE" : "DEACTIVATE", userId: actorId, metadata: input });

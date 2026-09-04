@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     await assertSessionCsrf(request, session);
     const { branchId } = z.object({ branchId: z.uuid() }).parse(await request.json());
     const db = await getDataSource();
-    if (!(await db.getRepository<Branch>("Branch").existsBy({ id: branchId, active: true }))) throw new BadRequestError("Filial selecionada não está disponível.");
+    if (!(await db.getRepository<Branch>("branches").existsBy({ id: branchId, active: true }))) throw new BadRequestError("Filial selecionada não está disponível.");
     await assertBranchAccess(user, branchId);
     await updateSessionBranch(session.sessionId, branchId);
     return NextResponse.json({ ok: true, previousBranchId: session.branchId });

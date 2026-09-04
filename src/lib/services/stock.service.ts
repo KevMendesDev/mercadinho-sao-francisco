@@ -9,7 +9,7 @@ async function saveMovement(manager: EntityManager, input: {
   productId: string; branchId: string; batchId?: string | null; type: StockMovementType; quantity: number;
   source?: MovementSource; reason?: string | null; referenceId?: string | null; userId?: string | null;
 }) {
-  return manager.getRepository<StockMovement>("StockMovement").save(manager.getRepository<StockMovement>("StockMovement").create({
+  return manager.getRepository<StockMovement>("stock_movements").save(manager.getRepository<StockMovement>("stock_movements").create({
     productId: input.productId,
     branchId: input.branchId,
     batchId: input.batchId ?? null,
@@ -28,8 +28,8 @@ export async function addStockEntry(input: {
 }) {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    if (!(await manager.getRepository<Product>("Product").existsBy({ id: input.productId, active: true }))) throw new BadRequestError("Produto não encontrado ou inativo.");
-    const batch = await manager.getRepository<StockBatch>("StockBatch").save(manager.getRepository<StockBatch>("StockBatch").create({
+    if (!(await manager.getRepository<Product>("products").existsBy({ id: input.productId, active: true }))) throw new BadRequestError("Produto não encontrado ou inativo.");
+    const batch = await manager.getRepository<StockBatch>("stock_batches").save(manager.getRepository<StockBatch>("stock_batches").create({
       productId: input.productId,
       branchId: input.branchId,
       quantity: input.quantity,
@@ -53,7 +53,7 @@ export async function removeStockFefo(input: {
 }) {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    const batches = await manager.getRepository<StockBatch>("StockBatch").createQueryBuilder("batch")
+    const batches = await manager.getRepository<StockBatch>("stock_batches").createQueryBuilder("batch")
       .setLock("pessimistic_write")
       .where("batch.product_id = :productId", { productId: input.productId })
       .andWhere("batch.branch_id = :branchId", { branchId: input.branchId })
@@ -69,7 +69,7 @@ export async function removeStockFefo(input: {
       if (remaining === 0) break;
       const used = Math.min(batch.quantity, remaining);
       batch.quantity -= used;
-      await manager.getRepository<StockBatch>("StockBatch").save(batch);
+      await manager.getRepository<StockBatch>("stock_batches").save(batch);
       await saveMovement(manager, {
         productId: input.productId, branchId: input.branchId, batchId: batch.id,
         type: StockMovementType.EXIT, quantity: used, reason: input.reason,
@@ -84,14 +84,14 @@ export async function removeStockFefo(input: {
 export async function adjustBatch(input: { batchId: string; newQuantity: number; reason: string; userId: string }) {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
-    const batch = await manager.getRepository<StockBatch>("StockBatch").createQueryBuilder("batch")
+    const batch = await manager.getRepository<StockBatch>("stock_batches").createQueryBuilder("batch")
       .setLock("pessimistic_write").where("batch.id = :id", { id: input.batchId }).getOne();
     if (!batch) throw new NotFoundError("Lote não encontrado.");
     const previous = batch.quantity;
     const delta = input.newQuantity - previous;
     if (delta === 0) return batch;
     batch.quantity = input.newQuantity;
-    await manager.getRepository<StockBatch>("StockBatch").save(batch);
+    await manager.getRepository<StockBatch>("stock_batches").save(batch);
     await saveMovement(manager, {
       productId: batch.productId, branchId: batch.branchId, batchId: batch.id,
       type: StockMovementType.ADJUSTMENT, quantity: delta, reason: input.reason, userId: input.userId,
@@ -104,7 +104,7 @@ export async function adjustBatch(input: { batchId: string; newQuantity: number;
 export async function listStock(branchId: string, page?: number, size?: number) {
   const db = await getDataSource();
   const options = pagination(page, size);
-  const repo = db.getRepository<StockBatch>("StockBatch");
+  const repo = db.getRepository<StockBatch>("stock_batches");
   const where = { branchId, quantity: MoreThan(0) };
   const totalElements = await repo.count({ where });
   const currentPage = pageForTotal(options.page, options.size, totalElements);
@@ -115,7 +115,7 @@ export async function listStock(branchId: string, page?: number, size?: number) 
 export async function listMovements(branchId: string, page?: number, size?: number) {
   const db = await getDataSource();
   const options = pagination(page, size);
-  const repo = db.getRepository<StockMovement>("StockMovement");
+  const repo = db.getRepository<StockMovement>("stock_movements");
   const totalElements = await repo.count({ where: { branchId } });
   const currentPage = pageForTotal(options.page, options.size, totalElements);
   const content = await repo.find({ where: { branchId }, relations: { product: true, user: true, batch: true }, order: { createdAt: "DESC" }, skip: (currentPage - 1) * options.size, take: options.size });

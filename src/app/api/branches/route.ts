@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const db = await getDataSource();
     const url = new URL(request.url);
     const options = pagination(Number(url.searchParams.get("page")), Number(url.searchParams.get("size")));
-    const [content, totalElements] = await db.getRepository<Branch>("Branch").findAndCount({ where: { active: true }, order: { name: "ASC" }, select: { id: true, name: true }, skip: options.skip, take: options.size });
+    const [content, totalElements] = await db.getRepository<Branch>("branches").findAndCount({ where: { active: true }, order: { name: "ASC" }, select: { id: true, name: true }, skip: options.skip, take: options.size });
     return NextResponse.json(pageResult(content, totalElements, options.page, options.size));
   } catch (error) { return apiError(error); }
 }

@@ -28,29 +28,29 @@ export async function createSession(data: Omit<SessionData, "csrfTokenHash" | "s
   requireAuthSecret();
   const now = new Date(); const absoluteExpiresAt = new Date(now.getTime() + ABSOLUTE_MS);
   const token = randomToken(); const csrfToken = randomToken(); const db = await getDataSource();
-  await db.getRepository<UserSession>("UserSession").save({ tokenHash: hashSessionToken(token), csrfTokenHash: hashSessionToken(csrfToken), userId: data.userId, branchId: data.branchId, lastActivityAt: now, idleExpiresAt: new Date(now.getTime() + IDLE_MS), absoluteExpiresAt, revokedAt: null });
+  await db.getRepository<UserSession>("user_sessions").insert({ tokenHash: hashSessionToken(token), csrfTokenHash: hashSessionToken(csrfToken), userId: data.userId, branchId: data.branchId, lastActivityAt: now, idleExpiresAt: new Date(now.getTime() + IDLE_MS), absoluteExpiresAt, revokedAt: null });
   await issueCookies(token, csrfToken, absoluteExpiresAt);
 }
 
 export async function readSession(): Promise<SessionData | null> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const db = await getDataSource(); const repository = db.getRepository<UserSession>("UserSession");
+  const db = await getDataSource(); const repository = db.getRepository<UserSession>("user_sessions");
   const record = await repository.findOne({ where: { tokenHash: hashSessionToken(token) } }); const now = new Date();
   if (!record || record.revokedAt || record.idleExpiresAt <= now || record.absoluteExpiresAt <= now) return null;
   await repository.update(record.id, { lastActivityAt: now, idleExpiresAt: new Date(Math.min(now.getTime() + IDLE_MS, record.absoluteExpiresAt.getTime())) });
-  const user = await db.getRepository<User>("User").findOne({ where: { id: record.userId } });
+  const user = await db.getRepository<User>("users").findOne({ where: { id: record.userId } });
   if (!user) return null;
   return { userId: user.id, name: user.name, email: user.email, role: user.role, branchId: record.branchId, csrfTokenHash: record.csrfTokenHash, sessionId: record.id };
 }
 
 export async function revokeSession(): Promise<void> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (token) await (await getDataSource()).getRepository<UserSession>("UserSession").update({ tokenHash: hashSessionToken(token) }, { revokedAt: new Date() });
+  if (token) await (await getDataSource()).getRepository<UserSession>("user_sessions").update({ tokenHash: hashSessionToken(token) }, { revokedAt: new Date() });
 }
 
 export async function updateSessionBranch(sessionId: string, branchId: string): Promise<void> {
-  await (await getDataSource()).getRepository<UserSession>("UserSession").update(sessionId, { branchId });
+  await (await getDataSource()).getRepository<UserSession>("user_sessions").update(sessionId, { branchId });
 }
 
 export async function destroySession(): Promise<void> {
@@ -61,9 +61,9 @@ export async function destroySession(): Promise<void> {
 
 export async function requireSession(roles?: UserRole[]): Promise<SessionData> {
   const session = await readSession(); if (!session) redirect("/login");
-  const db = await getDataSource(); const user = await db.getRepository<User>("User").findOne({ where: { id: session.userId } });
-  const branch = await db.getRepository<Branch>("Branch").findOneBy({ id: session.branchId, active: true });
-  const hasAccess = user?.role === UserRole.ADMIN || !!user && await db.getRepository<UserBranch>("UserBranch").existsBy({ userId: user.id, branchId: session.branchId });
+  const db = await getDataSource(); const user = await db.getRepository<User>("users").findOne({ where: { id: session.userId } });
+  const branch = await db.getRepository<Branch>("branches").findOneBy({ id: session.branchId, active: true });
+  const hasAccess = user?.role === UserRole.ADMIN || !!user && await db.getRepository<UserBranch>("user_branches").existsBy({ userId: user.id, branchId: session.branchId });
   if (!user || !user.active || user.deletedAt || !branch || !hasAccess) redirect("/login");
   if (roles && !roles.includes(user.role)) redirect("/dashboard");
   return { ...session, role: user.role };

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ session: vi.fn(), destroy: vi.fn(), user: vi.fn(), branch: vi.fn(), access: vi.fn() }));
 vi.mock("./session", () => ({ readSession: state.session, destroySession: state.destroy }));
 vi.mock("@/database/data-source", () => ({ getDataSource: vi.fn(async () => ({
-  getRepository: (name: string) => name === "User" ? { findOne: state.user } : name === "Branch" ? { existsBy: state.branch } : { existsBy: state.access },
+  getRepository: (name: string) => name === "users" ? { findOne: state.user } : name === "branches" ? { existsBy: state.branch } : { existsBy: state.access },
 })) }));
 
 import { requireApiUser, UnauthorizedError } from "./authorization";

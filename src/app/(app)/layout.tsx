@@ -14,7 +14,7 @@ export default async function AppLayout({
   let branches: { id: string; name: string }[];
   if (session.role === UserRole.ADMIN) {
     branches = (
-      await db.getRepository<Branch>("Branch").find({
+      await db.getRepository<Branch>("branches").find({
         where: { active: true },
         order: { name: "ASC" },
         select: { id: true, name: true },
@@ -22,7 +22,7 @@ export default async function AppLayout({
     ).map((branch) => ({ id: branch.id, name: branch.name }));
   } else {
     const accesses = await db
-      .getRepository<UserBranch>("UserBranch")
+      .getRepository<UserBranch>("user_branches")
       .find({ where: { userId: session.userId }, relations: { branch: true } });
     branches = accesses
       .filter((access) => access.branch.active)
