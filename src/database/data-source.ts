@@ -6,6 +6,13 @@ import { CategoriesAndProductDetails1787800000000 } from "./migrations/178780000
 import { LoginRateLimitsAndCategoryNameIndex1787900000000 } from "./migrations/1787900000000-LoginRateLimitsAndCategoryNameIndex";
 import { UserSessions1788000000000 } from "./migrations/1788000000000-UserSessions";
 
+// O TypeORM carrega o driver PostgreSQL dinamicamente com require("pg") por padrão.
+// Em runtimes serverless/bundled (como Vercel), esse require dinâmico pode não ser
+// detectado pelo rastreamento de dependências. Exigimos o módulo explicitamente e
+// o entregamos ao TypeORM para garantir que o pg faça parte da Function.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const postgresDriver = require("pg");
+
 const entities = [AuditLog, Branch, Category, LoginRateLimit, Product, StockBatch, StockMovement, User, UserBranch, UserSession];
 
 function databaseUrl(overrideUrl?: string): string {
@@ -17,6 +24,7 @@ function databaseUrl(overrideUrl?: string): string {
 export function createDataSource(overrideUrl?: string): DataSource {
   return new DataSource({
     type: "postgres",
+    driver: postgresDriver,
     url: databaseUrl(overrideUrl),
     entities,
     migrations: [InitialSchema1787700000000, CategoriesAndProductDetails1787800000000, LoginRateLimitsAndCategoryNameIndex1787900000000, UserSessions1788000000000],
