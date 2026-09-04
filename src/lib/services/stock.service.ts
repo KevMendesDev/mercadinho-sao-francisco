@@ -26,19 +26,20 @@ async function saveMovement(
     userId?: string | null;
   },
 ) {
-  return manager.getRepository<StockMovement>("stock_movements").save(
-    manager.getRepository<StockMovement>("stock_movements").create({
-      productId: input.productId,
-      branchId: input.branchId,
-      batchId: input.batchId ?? null,
-      type: input.type,
-      quantity: input.quantity,
-      source: input.source ?? MovementSource.MANUAL,
-      reason: input.reason ?? null,
-      referenceId: input.referenceId ?? null,
-      userId: input.userId ?? null,
-    }),
-  );
+  const result = await manager.getRepository<StockMovement>("stock_movements").insert({
+    productId: input.productId,
+    branchId: input.branchId,
+    batchId: input.batchId ?? null,
+    type: input.type,
+    quantity: input.quantity,
+    source: input.source ?? MovementSource.MANUAL,
+    reason: input.reason ?? null,
+    referenceId: input.referenceId ?? null,
+    userId: input.userId ?? null,
+  });
+  const id = result.identifiers[0]?.id;
+  if (typeof id !== "string") throw new Error("Não foi possível criar a movimentação de estoque.");
+  return { id };
 }
 
 export async function addStockEntry(input: {
@@ -59,20 +60,20 @@ export async function addStockEntry(input: {
         .existsBy({ id: input.productId, active: true }))
     )
       throw new BadRequestError("Produto não encontrado ou inativo.");
-    const batch = await manager.getRepository<StockBatch>("stock_batches").save(
-      manager.getRepository<StockBatch>("stock_batches").create({
-        productId: input.productId,
-        branchId: input.branchId,
-        quantity: input.quantity,
-        expirationDate: input.expirationDate,
-        unitCost: input.unitCost == null ? null : input.unitCost.toFixed(2),
-        createdByUserId: input.userId,
-      }),
-    );
+    const batchResult = await manager.getRepository<StockBatch>("stock_batches").insert({
+      productId: input.productId,
+      branchId: input.branchId,
+      quantity: input.quantity,
+      expirationDate: input.expirationDate,
+      unitCost: input.unitCost == null ? null : input.unitCost.toFixed(2),
+      createdByUserId: input.userId,
+    });
+    const batchId = batchResult.identifiers[0]?.id;
+    if (typeof batchId !== "string") throw new Error("Não foi possível criar o lote de estoque.");
     const movement = await saveMovement(manager, {
       productId: input.productId,
       branchId: input.branchId,
-      batchId: batch.id,
+      batchId,
       type: StockMovementType.ENTRY,
       quantity: input.quantity,
       reason: input.reason,
@@ -81,12 +82,12 @@ export async function addStockEntry(input: {
     });
     await writeAudit(manager, {
       entityType: "StockBatch",
-      entityId: batch.id,
+      entityId: batchId,
       action: "ENTRY",
       userId: input.userId,
       metadata: { quantity: input.quantity, movementId: movement.id },
     });
-    return batch;
+    return { id: batchId };
   });
 }
 
@@ -120,7 +121,7 @@ export async function removeStockFefo(input: {
       if (remaining === 0) break;
       const used = Math.min(batch.quantity, remaining);
       batch.quantity -= used;
-      await manager.getRepository<StockBatch>("stock_batches").save(batch);
+      await manager.getRepository<StockBatch>("stock_batches").update(batch.id, { quantity: batch.quantity });
       await saveMovement(manager, {
         productId: input.productId,
         branchId: input.branchId,
@@ -163,7 +164,7 @@ export async function adjustBatch(input: {
     const delta = input.newQuantity - previous;
     if (delta === 0) return batch;
     batch.quantity = input.newQuantity;
-    await manager.getRepository<StockBatch>("stock_batches").save(batch);
+    await manager.getRepository<StockBatch>("stock_batches").update(batch.id, { quantity: batch.quantity });
     await saveMovement(manager, {
       productId: batch.productId,
       branchId: batch.branchId,
