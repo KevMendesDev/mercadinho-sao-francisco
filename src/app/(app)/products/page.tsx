@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { getDataSource } from "@/database/data-source";
-import { Category, Product, UserRole } from "@/database/entities";
+import { Category, Product, StockBatch, UserRole } from "@/database/entities";
 import { requireSession } from "@/lib/auth/session";
 import { pagination } from "@/lib/pagination";
 
@@ -40,6 +40,19 @@ export default async function ProductsPage({
     .offset((currentPage - 1) * options.size)
     .limit(options.size)
     .getMany();
+  const stockedProductIds = products.length
+    ? new Set(
+        (
+          await db
+            .getRepository<StockBatch>("stock_batches")
+            .createQueryBuilder("batch")
+            .select("batch.product_id", "productId")
+            .where("batch.product_id IN (:...productIds)", { productIds: products.map((product) => product.id) })
+            .andWhere("batch.quantity > 0")
+            .getRawMany<{ productId: string }>()
+        ).map((row) => row.productId),
+      )
+    : new Set<string>();
   const [totalProducts, totalCategories] = await Promise.all([
     repo.countBy({ active: true }),
     db.getRepository<Category>("categories").count(),
@@ -130,6 +143,7 @@ export default async function ProductsPage({
                           unit: product.unit as "ML" | "G" | "KG" | "L",
                           weight: product.weight,
                         }}
+                        hasStock={stockedProductIds.has(product.id)}
                       />
                     ) : (
                       "—"

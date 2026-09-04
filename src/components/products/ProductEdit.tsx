@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CategorySelect } from "./CategorySelect";
 import { requestJson } from "@/lib/client-api";
@@ -16,7 +16,7 @@ type EditableProduct = {
   weight: string | null;
 };
 
-export function ProductEdit({ product }: { product: EditableProduct }) {
+export function ProductEdit({ product, hasStock }: { product: EditableProduct; hasStock: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,16 +53,44 @@ export function ProductEdit({ product }: { product: EditableProduct }) {
       setLoading(false);
     }
   }
+  async function remove() {
+    if (!window.confirm(`Excluir o produto “${product.name}”?`)) return;
+    try {
+      await requestJson(
+        `/api/products/${product.id}`,
+        { method: "DELETE" },
+        "Erro ao excluir produto.",
+      );
+      router.refresh();
+    } catch (reason) {
+      window.alert(reason instanceof Error ? reason.message : "Erro ao excluir produto.");
+    }
+  }
   return (
     <>
-      <button
-        className="btn-secondary px-3 py-2"
-        aria-label={`Editar ${product.name}`}
-        onClick={() => setOpen(true)}
-      >
-        <Pencil size={16} />
-        Editar
-      </button>
+      <div className="table-actions flex gap-2">
+        <button
+          className="btn-secondary px-3 py-2"
+          aria-label={`Editar ${product.name}`}
+          onClick={() => setOpen(true)}
+        >
+          <Pencil size={16} />
+          Editar
+        </button>
+        {hasStock ? (
+          <span title="O produto possui estoque" className="inline-flex cursor-not-allowed">
+            <button disabled className="btn-secondary px-3 py-2 opacity-40">
+              <Trash2 size={16} />
+              Excluir
+            </button>
+          </span>
+        ) : (
+          <button className="btn-secondary px-3 py-2 text-red-700" onClick={() => void remove()}>
+            <Trash2 size={16} />
+            Excluir
+          </button>
+        )}
+      </div>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 text-left">
           <div className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 md:p-7">

@@ -25,4 +25,10 @@ describe("apiError", () => {
     const response = apiError({ code: "23505" });
     expect(response.status).toBe(409);
   });
+
+  it.each(["23001", "23503"])("converte restrição de chave estrangeira %s em conflito", async (code) => {
+    const response = apiError({ code });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: "Não é possível excluir este registro porque ele está sendo utilizado." });
+  });
 });

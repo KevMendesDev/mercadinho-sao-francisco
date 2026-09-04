@@ -55,9 +55,15 @@ export async function deleteCategory(id: string, userId: string) {
   const db = await getDataSource();
   return db.transaction(async (manager) => {
     const categoryRepo = manager.getRepository<Category>("categories");
+    const productRepo = manager.getRepository<Product>("products");
     const category = await categoryRepo.findOneBy({ id });
     if (!category) throw new NotFoundError("Categoria não encontrada.");
-    if (await manager.getRepository<Product>("products").existsBy({ categoryId: id })) throw new ConflictError("Categoria já está sendo utilizada.");
+    const linkedProducts = await productRepo.find({ where: { categoryId: id }, withDeleted: true });
+    if (linkedProducts.some((product) => !product.deletedAt)) throw new ConflictError("Categoria já está sendo utilizada.");
+    for (const product of linkedProducts) {
+      product.categoryId = null;
+      await productRepo.save(product);
+    }
     await categoryRepo.remove(category);
     await writeAudit(manager, { entityType: "Category", entityId: id, action: "DELETE", userId, metadata: { name: category.name } });
   });

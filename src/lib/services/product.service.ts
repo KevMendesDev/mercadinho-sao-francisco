@@ -1,6 +1,6 @@
-import { ILike } from "typeorm";
+import { ILike, MoreThan } from "typeorm";
 import { getDataSource } from "@/database/data-source";
-import { Category, Product } from "@/database/entities";
+import { Category, Product, StockBatch } from "@/database/entities";
 import { writeAudit } from "./audit.service";
 import { pageForTotal, pageResult, pagination } from "@/lib/pagination";
 import { ConflictError, NotFoundError } from "@/lib/errors";
@@ -56,6 +56,24 @@ export async function updateProduct(id: string, input: ProductInput, userId: str
     const updated = await repo.save(product);
     await writeAudit(manager, { entityType: "Product", entityId: updated.id, action: "UPDATE", userId, metadata: { barcode: updated.barcode } });
     return updated;
+  });
+}
+
+export async function deleteProduct(id: string, userId: string) {
+  const db = await getDataSource();
+  return db.transaction(async (manager) => {
+    const productRepo = manager.getRepository<Product>("products");
+    const product = await productRepo.findOneBy({ id });
+    if (!product) throw new NotFoundError("Produto não encontrado.");
+    const hasStock = await manager.getRepository<StockBatch>("stock_batches").existsBy({
+      productId: id,
+      quantity: MoreThan(0),
+    });
+    if (hasStock) throw new ConflictError("Produto não pode ser excluído porque possui estoque.");
+    product.categoryId = null;
+    await productRepo.save(product);
+    await productRepo.softRemove(product);
+    await writeAudit(manager, { entityType: "Product", entityId: id, action: "DELETE", userId, metadata: { name: product.name } });
   });
 }
 
