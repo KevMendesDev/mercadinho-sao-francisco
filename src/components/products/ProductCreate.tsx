@@ -8,7 +8,7 @@ import { CategorySelect } from "./CategorySelect";
 import { requestJson } from "@/lib/client-api";
 
 type CreatedProduct = { id: string; name: string; barcode: string | null };
-type Fields = {
+export type ProductPrefill = {
   barcode: string;
   name: string;
   brand: string;
@@ -16,6 +16,7 @@ type Fields = {
   weight: string;
   unit: "ML" | "G" | "KG" | "L";
 };
+type Fields = ProductPrefill;
 const emptyFields: Fields = {
   barcode: "",
   name: "",
@@ -31,6 +32,7 @@ export function ProductCreate({
   open: controlledOpen,
   onOpenChange,
   initialBarcode,
+  initialFields,
   hideTrigger = false,
 }: {
   onCreated?: (product: CreatedProduct) => void;
@@ -38,6 +40,7 @@ export function ProductCreate({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialBarcode?: string;
+  initialFields?: Partial<ProductPrefill>;
   hideTrigger?: boolean;
 }) {
   const router = useRouter();
@@ -47,7 +50,7 @@ export function ProductCreate({
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Fields>(() =>
     initialBarcode
-      ? { ...emptyFields, barcode: initialBarcode.replace(/\D/g, "") }
+      ? { ...emptyFields, ...initialFields, barcode: initialBarcode.replace(/\D/g, "") }
       : emptyFields,
   );
   const open = controlledOpen ?? localOpen;

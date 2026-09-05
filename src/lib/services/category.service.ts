@@ -107,8 +107,7 @@ export async function deleteCategory(id: string, userId: string) {
     if (linkedProducts.some((product) => !product.deletedAt))
       throw new ConflictError("Categoria já está sendo utilizada.");
     for (const product of linkedProducts) {
-      product.categoryId = null;
-      await productRepo.save(product);
+      await productRepo.update(product.id, { categoryId: null });
     }
     await categoryRepo.remove(category);
     await writeAudit(manager, {
