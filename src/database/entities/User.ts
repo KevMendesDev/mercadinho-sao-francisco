@@ -15,5 +15,5 @@ export class User {
   @CreateDateColumn({ name: "created_at", type: "timestamptz" }) createdAt!: Date;
   @UpdateDateColumn({ name: "updated_at", type: "timestamptz" }) updatedAt!: Date;
 
-  @OneToMany(() => UserBranch, (userBranch) => userBranch.user, { cascade: true }) branchAccesses!: UserBranch[];
+  @OneToMany(() => UserBranch, (userBranch) => userBranch.user) branchAccesses!: UserBranch[];
 }

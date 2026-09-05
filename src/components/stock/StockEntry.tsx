@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ProductCreate } from "@/components/products/ProductCreate";
+import { ProductCreate, type ProductPrefill } from "@/components/products/ProductCreate";
 import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 import { requestJson } from "@/lib/client-api";
 import { ProductOption, ProductPicker } from "./ProductPicker";
@@ -27,6 +27,7 @@ export function StockEntry({
   const [createOpen, setCreateOpen] = useState(false);
   const [quantidade, setQuantidade] = useState<string>("");
   const [barcodeToCreate, setBarcodeToCreate] = useState("");
+  const [productToCreate, setProductToCreate] = useState<Partial<ProductPrefill>>({});
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const apenasNumeros = e.target.value.replace(/[^0-9]/g, "");
@@ -38,8 +39,9 @@ export function StockEntry({
     setProductId(product.id);
     setError("");
   }
-  function openCreate(code = "") {
+  function openCreate(code = "", fields: Partial<ProductPrefill> = {}) {
     setBarcodeToCreate(code);
+    setProductToCreate(fields);
     setCreateOpen(true);
   }
   async function selectByBarcode(value: string) {
@@ -52,14 +54,17 @@ export function StockEntry({
     try {
       const data = await requestJson<{
         source?: string;
-        product?: ProductOption;
+        product?: ProductOption | (Partial<ProductPrefill> & { brand?: string | null });
       }>(`/api/products/lookup/${code}`, {}, "Produto não encontrado.");
-      if (data.product) {
+      if (data.source === "LOCAL" && data.product && "id" in data.product) {
         addProduct(data.product);
         return;
       }
       if (canCreateProduct) {
-        openCreate(code);
+        const externalProduct = data.product && !("id" in data.product)
+          ? { ...data.product, brand: data.product.brand ?? "" }
+          : {};
+        openCreate(code, externalProduct);
         return;
       }
       setError(
@@ -119,6 +124,7 @@ export function StockEntry({
           open={createOpen}
           onOpenChange={setCreateOpen}
           initialBarcode={barcodeToCreate}
+          initialFields={productToCreate}
           onCreated={addProduct}
         />
       )}

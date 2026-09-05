@@ -12,19 +12,19 @@ describe("deleteProduct", () => {
 
   it("exclui produto sem estoque e registra auditoria", async () => {
     const product = { id: "product-1", name: "Arroz", categoryId: "category-1" };
-    const save = vi.fn().mockResolvedValue(product);
-    const softRemove = vi.fn().mockResolvedValue(product);
+    const update = vi.fn().mockResolvedValue(undefined);
+    const softDelete = vi.fn().mockResolvedValue(undefined);
     const manager = {
       getRepository: (entity: string) => entity === "products"
-        ? { findOneBy: vi.fn().mockResolvedValue(product), save, softRemove }
+        ? { findOneBy: vi.fn().mockResolvedValue(product), update, softDelete }
         : { existsBy: vi.fn().mockResolvedValue(false) },
     };
     getDataSource.mockResolvedValue({ transaction: async (callback: (value: typeof manager) => Promise<void>) => callback(manager) });
 
     await deleteProduct("product-1", "user-1");
 
-    expect(save).toHaveBeenCalledWith({ ...product, categoryId: null });
-    expect(softRemove).toHaveBeenCalledWith(product);
+    expect(update).toHaveBeenCalledWith("product-1", { categoryId: null });
+    expect(softDelete).toHaveBeenCalledWith("product-1");
     expect(writeAudit).toHaveBeenCalledWith(manager, expect.objectContaining({ entityId: "product-1", action: "DELETE" }));
   });
 

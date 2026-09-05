@@ -54,14 +54,16 @@ export async function createProduct(
         .existsBy({ id: input.categoryId }))
     )
       throw new NotFoundError("Categoria não encontrada.");
-    const product = await repo.save(
-      repo.create({
-        ...input,
-        categoryId: input.categoryId || null,
-        barcode: input.barcode || null,
-        weight: input.weight == null ? null : input.weight.toFixed(3),
-      }),
-    );
+    const result = await repo.insert({
+      ...input,
+      categoryId: input.categoryId || null,
+      barcode: input.barcode || null,
+      weight: input.weight == null ? null : input.weight.toFixed(3),
+    });
+    const id = result.identifiers[0]?.id;
+    if (typeof id !== "string")
+      throw new Error("Não foi possível criar o produto.");
+    const product = await repo.findOneByOrFail({ id });
     await writeAudit(manager, {
       entityType: "Product",
       entityId: product.id,
@@ -95,13 +97,14 @@ export async function updateProduct(
         .existsBy({ id: input.categoryId }))
     )
       throw new NotFoundError("Categoria não encontrada.");
-    Object.assign(product, {
+    const changes = {
       ...input,
       categoryId: input.categoryId || null,
       barcode: input.barcode || null,
       weight: input.weight == null ? null : input.weight.toFixed(3),
-    });
-    const updated = await repo.save(product);
+    };
+    await repo.update(id, changes);
+    const updated = Object.assign(product, changes);
     await writeAudit(manager, {
       entityType: "Product",
       entityId: updated.id,
@@ -129,9 +132,8 @@ export async function deleteProduct(id: string, userId: string) {
       throw new ConflictError(
         "Produto não pode ser excluído porque possui estoque.",
       );
-    product.categoryId = null;
-    await productRepo.save(product);
-    await productRepo.softRemove(product);
+    await productRepo.update(id, { categoryId: null });
+    await productRepo.softDelete(id);
     await writeAudit(manager, {
       entityType: "Product",
       entityId: id,

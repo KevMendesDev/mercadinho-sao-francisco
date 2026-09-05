@@ -76,28 +76,24 @@ export async function createUser(
       throw new BadRequestError(
         "Uma ou mais filiais selecionadas não existem.",
       );
-    const user = await repo.save(
-      repo.create({
-        name: input.name,
-        email: input.email,
-        passwordHash: await hash(input.password, 12),
-        role: input.role,
-        active: input.active,
-        deletedAt: input.active ? null : new Date(),
-      }),
-    );
+    const result = await repo.insert({
+      name: input.name,
+      email: input.email,
+      passwordHash: await hash(input.password, 12),
+      role: input.role,
+      active: input.active,
+      deletedAt: input.active ? null : new Date(),
+    });
+    const id = result.identifiers[0]?.id;
+    if (typeof id !== "string")
+      throw new Error("Não foi possível criar o usuário.");
+    const user = await repo.findOneByOrFail({ id });
     if (input.role !== UserRole.ADMIN && input.branchIds.length === 0)
       throw new BadRequestError("Selecione ao menos uma filial.");
     if (input.role !== UserRole.ADMIN) {
       await manager
         .getRepository<UserBranch>("user_branches")
-        .save(
-          input.branchIds.map((branchId) =>
-            manager
-              .getRepository<UserBranch>("user_branches")
-              .create({ userId: user.id, branchId }),
-          ),
-        );
+        .insert(input.branchIds.map((branchId) => ({ userId: user.id, branchId })));
     }
     await writeAudit(manager, {
       entityType: "User",
@@ -155,13 +151,17 @@ export async function updateUser(
           "O sistema precisa manter ao menos um administrador ativo.",
         );
     }
-    if (input.name !== undefined) user.name = input.name;
-    if (input.role !== undefined) user.role = input.role;
+    const changes: Partial<User> = {};
+    if (input.name !== undefined) changes.name = input.name;
+    if (input.role !== undefined) changes.role = input.role;
     if (input.active !== undefined) {
-      user.active = input.active;
-      user.deletedAt = input.active ? null : new Date();
+      changes.active = input.active;
+      changes.deletedAt = input.active ? null : new Date();
     }
-    await repo.save(user);
+    if (Object.keys(changes).length) {
+      await repo.update(user.id, changes);
+      Object.assign(user, changes);
+    }
 
     if (input.branchIds !== undefined || input.role !== undefined) {
       const branchIds = input.branchIds ?? [];
@@ -184,13 +184,7 @@ export async function updateUser(
           );
         await manager
           .getRepository<UserBranch>("user_branches")
-          .save(
-            branchIds.map((branchId) =>
-              manager
-                .getRepository<UserBranch>("user_branches")
-                .create({ userId: user.id, branchId }),
-            ),
-          );
+          .insert(branchIds.map((branchId) => ({ userId: user.id, branchId })));
       }
     }
     await writeAudit(manager, {
