@@ -3,7 +3,9 @@ node_modules/
 out/
 coverage/
 .env
-.env*.local
+.env.*
+!.env.example
+!.env.production.example
 *.tsbuildinfo
 .DS_Store
 npm-debug.log*
