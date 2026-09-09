@@ -21,7 +21,7 @@ services:
     profiles: ["migration"]
     environment:
       DATABASE_URL: ${DATABASE_URL:?Defina DATABASE_URL}
-      DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:-${DATABASE_URL}}
+      DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:?Defina DATABASE_DIRECT_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,7 +34,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:?Defina DATABASE_URL}
-      DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:-${DATABASE_URL}}
+      DATABASE_DIRECT_URL: ${DATABASE_DIRECT_URL:?Defina DATABASE_DIRECT_URL}
       DATABASE_SSL: "false"
       AUTH_SECRET: ${AUTH_SECRET:?Defina AUTH_SECRET}
       OPEN_FOOD_FACTS_USER_AGENT: ${OPEN_FOOD_FACTS_USER_AGENT:-MercadinhoSaoFrancisco/1.0}
